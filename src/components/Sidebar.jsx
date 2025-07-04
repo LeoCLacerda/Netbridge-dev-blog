@@ -1,22 +1,31 @@
 import React from 'react'
-import { Mail, BookOpen, User } from 'lucide-react'
+import { Mail, BookOpen, User, Home } from 'lucide-react'
 
 const Sidebar = ({ currentPage, onNavigate, isTransitioning }) => {
   const menuItems = [
     {
+      id: 'welcome',
+      label: 'Home',
+      icon: Home,
+      customIcon: '/images/icons/home-icon.png'
+    },
+    {
       id: 'contact',
       label: 'Contact',
-      icon: Mail
+      icon: Mail,
+      customIcon: '/images/icons/contact-icon.png'
     },
     {
       id: 'blog',
       label: '.NET Blog',
-      icon: BookOpen
+      icon: BookOpen,
+      customIcon: '/images/icons/blog-icon.png'
     },
     {
       id: 'about',
       label: 'About',
-      icon: User
+      icon: User,
+      customIcon: '/images/icons/about-icon.png'
     }
   ]
 
@@ -36,8 +45,22 @@ const Sidebar = ({ currentPage, onNavigate, isTransitioning }) => {
                   onClick={() => onNavigate(item.id)}
                   disabled={isTransitioning}
                 >
-                  <IconComponent className="menu-icon" />
-                  {item.label}
+                  <div className="menu-icon-container">
+                    {/* Ícone customizado */}
+                    <img 
+                      src={item.customIcon} 
+                      alt={item.label}
+                      className="menu-icon-custom"
+                      onError={(e) => {
+                        // Fallback para ícone Lucide se a imagem falhar
+                        e.target.style.display = 'none'
+                        e.target.nextElementSibling.style.display = 'block'
+                      }}
+                    />
+                    {/* Ícone Lucide como fallback */}
+                    <IconComponent className="menu-icon-fallback" style={{display: 'none'}} />
+                  </div>
+                  <span className="menu-label">{item.label}</span>
                 </button>
               </li>
             )

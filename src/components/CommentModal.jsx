@@ -47,7 +47,17 @@ const CommentModal = ({ onClose, onSubmit }) => {
         <div className="modal-header">
           <h2 className="modal-title">Deixar um Comentário</h2>
           <button className="close-button" onClick={onClose}>
-            <X size={24} />
+            <img 
+              src="/images/icons/close-icon.png" 
+              alt="Fechar"
+              className="close-icon-custom"
+              onError={(e) => {
+                // Fallback para ícone Lucide se a imagem falhar
+                e.target.style.display = 'none'
+                e.target.nextElementSibling.style.display = 'block'
+              }}
+            />
+            <X size={24} className="close-icon-fallback" style={{display: 'none'}} />
           </button>
         </div>
         
