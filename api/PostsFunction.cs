@@ -21,7 +21,7 @@ public class PostsFunction
     {
         _logger.LogInformation("C# HTTP trigger function processed a request.");
 
-        var posts = new List<object>
+        var posts = new List<dynamic>
         {
             new {
                 id = 1,
