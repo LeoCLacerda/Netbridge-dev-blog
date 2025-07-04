@@ -31,7 +31,7 @@ jobs:
           app_location: "/" # App source code path
           api_location: "api" # Api source code path - optional
           output_location: "dist" # Built app content directory - changed from 'build' to 'dist'
-          app_build_command: "npm install --legacy-peer-deps && npm run build" # Added to resolve dependency conflicts
+          app_build_command: "npm ci && npm run build" # Changed to npm ci for consistent builds
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
