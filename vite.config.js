@@ -5,7 +5,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/Netbridge-dev-blog/', // Adicionado para GitHub Pages
+  base: './', // Alterado para caminho relativo para GitHub Pages
   plugins: [react(),tailwindcss()],
   resolve: {
     alias: {
