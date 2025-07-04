@@ -7,12 +7,12 @@ import BlogPost from './pages/BlogPost'
 import LoadingSpinner from './LoadingSpinner'
 import CommentModal from './CommentModal'
 
-const MainContent = ({ 
-  currentPage, 
-  isTransitioning, 
-  blogData, 
-  isLoadingBlog, 
-  onNavigate 
+const MainContent = ({
+  currentPage,
+  isTransitioning,
+  blogData,
+  isLoadingBlog,
+  onNavigate
 }) => {
   const [selectedPost, setSelectedPost] = useState(null)
   const [showCommentModal, setShowCommentModal] = useState(false)
@@ -33,13 +33,30 @@ const MainContent = ({
     setShowCommentModal(false)
   }
 
-  const handleSubmitComment = (commentData) => {
-    // Aqui você integraria com a API do Azure Functions
-    console.log('Comentário enviado:', commentData)
-    setShowCommentModal(false)
-    // Simular feedback de sucesso
-    alert('Comentário enviado com sucesso!')
-  }
+  const handleSubmitComment = async (commentData) => {
+    try {
+      const response = await fetch('/api/CommentsFunction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(commentData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.text(); // Ou response.json() se a função retornar JSON
+      console.log('Comentário enviado com sucesso:', result);
+      alert('Comentário enviado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar comentário:', error);
+      alert('Erro ao enviar comentário. Tente novamente.');
+    } finally {
+      setShowCommentModal(false);
+    }
+  };
 
   const renderPage = () => {
     if (isLoadingBlog && currentPage === 'blog') {
@@ -54,7 +71,7 @@ const MainContent = ({
       case 'blog':
         if (selectedPost) {
           return (
-            <BlogPost 
+            <BlogPost
               post={selectedPost}
               onBack={handleBackToBlog}
               onShowComments={handleShowComments}
@@ -67,7 +84,7 @@ const MainContent = ({
           )
         }
         return (
-          <BlogPage 
+          <BlogPage
             posts={blogData?.posts || []}
             onPostSelect={handlePostSelect}
           />
@@ -86,7 +103,7 @@ const MainContent = ({
       </div>
       
       {showCommentModal && (
-        <CommentModal 
+        <CommentModal
           onClose={handleCloseComments}
           onSubmit={handleSubmitComment}
         />
@@ -96,4 +113,5 @@ const MainContent = ({
 }
 
 export default MainContent
+
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router } from 'react-router-dom' // Alterado para BrowserRouter
+import { BrowserRouter as Router } from 'react-router-dom'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import MainContent from './components/MainContent'
@@ -27,46 +27,22 @@ function App() {
 
     setIsTransitioning(true)
     
-    // Se for blog, carregar dados
+    // Se for blog, carregar dados da Azure Function
     if (page === 'blog' && !blogData) {
       setIsLoadingBlog(true)
-      // Simular chamada de API
-      setTimeout(() => {
-        setBlogData({
-          posts: [
-            {
-              id: 1,
-              title: "Introdução ao .NET 8",
-              description: "Descubra as novidades e melhorias do .NET 8 para desenvolvimento moderno.",
-              content: "O .NET 8 representa um marco significativo no desenvolvimento de aplicações modernas...",
-              date: "2024-01-15",
-              author: "NetBridge Team"
-            },
-            {
-              id: 2,
-              title: "Azure Functions: Serverless Computing",
-              description: "Como implementar soluções serverless eficientes com Azure Functions.",
-              content: "Azure Functions oferece uma plataforma serverless robusta para desenvolvimento...",
-              date: "2024-01-10",
-              author: "NetBridge Team"
-            },
-            {
-              id: 3,
-              title: "React e .NET: Integração Perfeita",
-              description: "Melhores práticas para integrar frontend React com backend .NET.",
-              content: "A combinação de React no frontend com .NET no backend oferece...",
-              date: "2024-01-05",
-              author: "NetBridge Team"
-            }
-          ],
-          lastPosts: Array.from({length: 10}, (_, i) => ({
-            id: i + 1,
-            title: `Post ${i + 1}`,
-            date: `2024-01-${String(15 - i).padStart(2, '0')}`
-          }))
-        })
+      try {
+        const response = await fetch('/api/PostsFunction') // Chamada para a Azure Function
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setBlogData(data)
+      } catch (error) {
+        console.error('Erro ao carregar dados do blog:', error)
+        // Pode-se adicionar um estado de erro para exibir na UI
+      } finally {
         setIsLoadingBlog(false)
-      }, 1500)
+      }
     }
 
     setTimeout(() => {
