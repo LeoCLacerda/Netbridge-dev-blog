@@ -1,5 +1,6 @@
 import React from 'react'
 import { ArrowLeft, Calendar, User, MessageCircle } from 'lucide-react'
+import CommentsSection from '../CommentsSection'
 
 const BlogPost = ({ post, onBack, onShowComments, lastPosts, onPostSelect }) => {
   const formatDate = (dateString) => {
@@ -66,6 +67,12 @@ const BlogPost = ({ post, onBack, onShowComments, lastPosts, onPostSelect }) => 
             </button>
           </div>
         </article>
+
+        {/* Seção de Comentários */}
+        <CommentsSection 
+          postId={post.id} 
+          onAddComment={onShowComments}
+        />
       </div>
       
       <aside className="blog-sidebar">

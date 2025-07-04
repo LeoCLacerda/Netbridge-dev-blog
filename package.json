@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:setup": "node scripts/dev-setup.js",
+    "dev:api": "cd api && func start --cors \"*\"",
+    "dev:frontend": "vite --host 0.0.0.0",
+    "dev:full": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
+    "start": "npm run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
