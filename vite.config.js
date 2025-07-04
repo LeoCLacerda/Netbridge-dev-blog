@@ -5,7 +5,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/Netbridge-dev-blog/', // Caminho base para GitHub Pages
+  base: '/', // Alterado para a raiz para deploy no Azure Static Web Apps
   plugins: [react(),tailwindcss()],
   resolve: {
     alias: {

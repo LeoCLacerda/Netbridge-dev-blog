@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { HashRouter as Router } from 'react-router-dom' // Alterado para HashRouter
+import { BrowserRouter as Router } from 'react-router-dom' // Alterado para BrowserRouter
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import MainContent from './components/MainContent'
