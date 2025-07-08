@@ -4,6 +4,7 @@ import ContactPage from './pages/ContactPage'
 import AboutPage from './pages/AboutPage'
 import BlogPage from './pages/BlogPage'
 import BlogPost from './pages/BlogPost'
+import PublishPage from './pages/PublishPage'
 import LoadingSpinner from './LoadingSpinner'
 import CommentModal from './CommentModal'
 
@@ -68,6 +69,8 @@ const MainContent = ({
         return <ContactPage />
       case 'about':
         return <AboutPage />
+      case 'publish':
+        return <PublishPage />
       case 'blog':
         if (selectedPost) {
           return (

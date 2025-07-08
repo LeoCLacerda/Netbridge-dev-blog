@@ -1,5 +1,5 @@
 import React from 'react'
-import { Mail, BookOpen, User, Home } from 'lucide-react'
+import { Mail, BookOpen, User, Home, PenTool } from 'lucide-react'
 
 const Sidebar = ({ currentPage, onNavigate, isTransitioning }) => {
   const menuItems = [
@@ -20,6 +20,12 @@ const Sidebar = ({ currentPage, onNavigate, isTransitioning }) => {
       label: '.NET Blog',
       icon: BookOpen,
       customIcon: '/images/icons/blog-icon.png'
+    },
+    {
+      id: 'publish',
+      label: 'Publish',
+      icon: PenTool,
+      customIcon: '/images/icons/publish-icon.png'
     },
     {
       id: 'about',
