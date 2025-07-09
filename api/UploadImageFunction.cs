@@ -1,10 +1,6 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
+using System.Net;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -17,44 +13,60 @@ using SixLabors.ImageSharp.Formats.Webp;
 
 namespace NetBridgeDev.Api
 {
-    public static class UploadImageFunction
+    public class UploadImageFunction
     {
-        [FunctionName("UploadImageFunction")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
-            ILogger log)
+        private readonly ILogger<UploadImageFunction> _logger;
+
+        public UploadImageFunction(ILogger<UploadImageFunction> logger)
         {
-            log.LogInformation("UploadImageFunction processando requisição de upload de imagem.");
+            _logger = logger;
+        }
+
+        [Function("UploadImageFunction")]
+        public async Task<HttpResponseData> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        {
+            _logger.LogInformation("UploadImageFunction processando requisição de upload de imagem.");
 
             try
             {
                 // Verificar se há arquivos na requisição
-                if (!req.HasFormContentType || req.Form.Files.Count == 0)
+                var formData = await req.ReadFormAsync();
+                
+                if (formData.Files.Count == 0)
                 {
-                    return new BadRequestObjectResult(new { error = "Nenhuma imagem foi enviada." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Nenhuma imagem foi enviada." });
+                    return badResponse;
                 }
 
-                var imageFile = req.Form.Files["image"];
-                var imageId = req.Form["imageId"].ToString();
-                var originalName = req.Form["originalName"].ToString();
+                var imageFile = formData.Files["image"];
+                var imageId = formData["imageId"].ToString();
+                var originalName = formData["originalName"].ToString();
 
                 if (imageFile == null || imageFile.Length == 0)
                 {
-                    return new BadRequestObjectResult(new { error = "Arquivo de imagem inválido." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Arquivo de imagem inválido." });
+                    return badResponse;
                 }
 
                 // Validar tipo de arquivo
                 var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
                 if (!Array.Exists(allowedTypes, type => type == imageFile.ContentType))
                 {
-                    return new BadRequestObjectResult(new { error = "Tipo de arquivo não suportado. Use JPEG, PNG, GIF ou WebP." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Tipo de arquivo não suportado. Use JPEG, PNG, GIF ou WebP." });
+                    return badResponse;
                 }
 
                 // Validar tamanho (5MB máximo)
                 const long maxSizeBytes = 5 * 1024 * 1024; // 5MB
                 if (imageFile.Length > maxSizeBytes)
                 {
-                    return new BadRequestObjectResult(new { error = "Imagem deve ter no máximo 5MB." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Imagem deve ter no máximo 5MB." });
+                    return badResponse;
                 }
 
                 // Configurar Azure Blob Storage
@@ -106,9 +118,10 @@ namespace NetBridgeDev.Api
                 // Retornar URL da imagem
                 var imageUrl = blobClient.Uri.ToString();
                 
-                log.LogInformation($"Imagem {imageId} enviada com sucesso: {imageUrl}");
+                _logger.LogInformation($"Imagem {imageId} enviada com sucesso: {imageUrl}");
 
-                return new OkObjectResult(new
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(new
                 {
                     success = true,
                     url = imageUrl,
@@ -118,11 +131,15 @@ namespace NetBridgeDev.Api
                     compressionRatio = Math.Round((1.0 - (double)processedImageData.ImageBytes.Length / imageFile.Length) * 100, 2),
                     blobName = blobName
                 });
+
+                return response;
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "Erro ao processar upload de imagem");
-                return new StatusCodeResult(500);
+                _logger.LogError(ex, "Erro ao processar upload de imagem");
+                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                await errorResponse.WriteAsJsonAsync(new { error = "Erro interno do servidor" });
+                return errorResponse;
             }
         }
 
@@ -189,6 +206,35 @@ namespace NetBridgeDev.Api
                 _ => ".jpg"
             };
         }
+    }
+
+    // Interface para compatibilidade com IFormFile
+    public interface IFormFile
+    {
+        string ContentType { get; }
+        long Length { get; }
+        string Name { get; }
+        Stream OpenReadStream();
+    }
+
+    // Implementação simples para compatibilidade
+    public class FormFileWrapper : IFormFile
+    {
+        private readonly Stream _stream;
+        
+        public FormFileWrapper(Stream stream, string contentType, long length, string name)
+        {
+            _stream = stream;
+            ContentType = contentType;
+            Length = length;
+            Name = name;
+        }
+
+        public string ContentType { get; }
+        public long Length { get; }
+        public string Name { get; }
+        
+        public Stream OpenReadStream() => _stream;
     }
 }
 

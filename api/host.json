@@ -5,12 +5,9 @@
       "samplingSettings": {
         "isEnabled": true,
         "excludedTypes": "Request"
-      }
+      },
+      "enableLiveMetricsFilters": true
     }
-  },
-  "extensionBundle": {
-    "id": "Microsoft.Azure.Functions.ExtensionBundle",
-    "version": "[4.*, 5.0.0)"
   },
   "functionTimeout": "00:10:00",
   "http": {
@@ -18,12 +15,6 @@
     "maxOutstandingRequests": 200,
     "maxConcurrentRequests": 100,
     "dynamicThrottlesEnabled": true
-  },
-  "customHandler": {
-    "description": {
-      "defaultExecutablePath": "dotnet",
-      "defaultWorkerPath": "NetBridgeDev.Api.dll"
-    }
   }
 }
 

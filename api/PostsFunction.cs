@@ -1,50 +1,54 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
+using System.Net;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace NetBridgeDev.Api
 {
-    public static class PostsFunction
+    public class PostsFunction
     {
-        [FunctionName("PostsFunction")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+        private readonly ILogger<PostsFunction> _logger;
+
+        public PostsFunction(ILogger<PostsFunction> logger)
         {
-            log.LogInformation("PostsFunction processando requisição.");
+            _logger = logger;
+        }
+
+        [Function("PostsFunction")]
+        public async Task<HttpResponseData> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req)
+        {
+            _logger.LogInformation("PostsFunction processando requisição.");
 
             try
             {
                 if (req.Method == "GET")
                 {
-                    return await HandleGetPosts(req, log);
+                    return await HandleGetPosts(req);
                 }
                 else if (req.Method == "POST")
                 {
-                    return await HandleCreatePost(req, log);
+                    return await HandleCreatePost(req);
                 }
                 else
                 {
-                    return new BadRequestObjectResult(new { error = "Método não suportado." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Método não suportado." });
+                    return badResponse;
                 }
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "Erro ao processar requisição de posts");
-                return new StatusCodeResult(500);
+                _logger.LogError(ex, "Erro ao processar requisição de posts");
+                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                await errorResponse.WriteAsJsonAsync(new { error = "Erro interno do servidor" });
+                return errorResponse;
             }
         }
 
-        private static async Task<IActionResult> HandleGetPosts(HttpRequest req, ILogger log)
+        private async Task<HttpResponseData> HandleGetPosts(HttpRequestData req)
         {
             // Simular dados de posts para desenvolvimento
             var posts = new[]
@@ -91,21 +95,26 @@ namespace NetBridgeDev.Api
                 createdAt = p.createdAt
             }).ToArray();
 
-            return new OkObjectResult(new
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(new
             {
                 posts = posts,
                 lastPosts = lastPosts,
                 total = posts.Length
             });
+
+            return response;
         }
 
-        private static async Task<IActionResult> HandleCreatePost(HttpRequest req, ILogger log)
+        private async Task<HttpResponseData> HandleCreatePost(HttpRequestData req)
         {
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            string requestBody = await req.ReadAsStringAsync() ?? "";
             
             if (string.IsNullOrEmpty(requestBody))
             {
-                return new BadRequestObjectResult(new { error = "Corpo da requisição vazio." });
+                var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badResponse.WriteAsJsonAsync(new { error = "Corpo da requisição vazio." });
+                return badResponse;
             }
 
             try
@@ -116,23 +125,29 @@ namespace NetBridgeDev.Api
                 });
 
                 // Validar dados obrigatórios
-                if (string.IsNullOrWhiteSpace(postData.Title))
+                if (string.IsNullOrWhiteSpace(postData?.Title))
                 {
-                    return new BadRequestObjectResult(new { error = "Título é obrigatório." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Título é obrigatório." });
+                    return badResponse;
                 }
 
                 if (string.IsNullOrWhiteSpace(postData.Description))
                 {
-                    return new BadRequestObjectResult(new { error = "Descrição é obrigatória." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Descrição é obrigatória." });
+                    return badResponse;
                 }
 
                 if (string.IsNullOrWhiteSpace(postData.Content))
                 {
-                    return new BadRequestObjectResult(new { error = "Conteúdo é obrigatório." });
+                    var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await badResponse.WriteAsJsonAsync(new { error = "Conteúdo é obrigatório." });
+                    return badResponse;
                 }
 
                 // Processar conteúdo HTML
-                var processedContent = ProcessHtmlContent(postData.Content, postData.Images, log);
+                var processedContent = ProcessHtmlContent(postData.Content, postData.Images);
 
                 // Criar objeto do post
                 var newPost = new
@@ -149,35 +164,40 @@ namespace NetBridgeDev.Api
                         imageId = img.ImageId,
                         url = img.FinalUrl,
                         tempUrl = img.TempUrl
-                    }).ToArray() ?? new object[0],
+                    }).ToArray() ?? Array.Empty<object>(),
                     status = "published",
                     slug = GenerateSlug(postData.Title)
                 };
 
                 // Aqui você salvaria no banco de dados
                 // Por enquanto, apenas log
-                log.LogInformation($"Post criado com sucesso: {newPost.title}");
-                log.LogInformation($"Conteúdo processado com {postData.Images?.Length ?? 0} imagens");
+                _logger.LogInformation($"Post criado com sucesso: {newPost.title}");
+                _logger.LogInformation($"Conteúdo processado com {postData.Images?.Length ?? 0} imagens");
 
                 // Simular salvamento no banco de dados
                 await Task.Delay(100); // Simular operação assíncrona
 
-                return new OkObjectResult(new
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteAsJsonAsync(new
                 {
                     success = true,
                     message = "Post criado com sucesso!",
                     post = newPost,
                     processedImages = postData.Images?.Length ?? 0
                 });
+
+                return response;
             }
             catch (JsonException ex)
             {
-                log.LogError(ex, "Erro ao deserializar dados do post");
-                return new BadRequestObjectResult(new { error = "Dados do post inválidos." });
+                _logger.LogError(ex, "Erro ao deserializar dados do post");
+                var badResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badResponse.WriteAsJsonAsync(new { error = "Dados do post inválidos." });
+                return badResponse;
             }
         }
 
-        private static string ProcessHtmlContent(string content, ImageUploadResult[] images, ILogger log)
+        private string ProcessHtmlContent(string content, ImageUploadResult[]? images)
         {
             if (images == null || images.Length == 0)
             {
@@ -197,11 +217,11 @@ namespace NetBridgeDev.Api
                     
                     processedContent = regex.Replace(processedContent, image.FinalUrl);
                     
-                    log.LogInformation($"URL substituída: {image.TempUrl} -> {image.FinalUrl}");
+                    _logger.LogInformation($"URL substituída: {image.TempUrl} -> {image.FinalUrl}");
                 }
                 catch (Exception ex)
                 {
-                    log.LogWarning(ex, $"Erro ao substituir URL da imagem {image.ImageId}");
+                    _logger.LogWarning(ex, $"Erro ao substituir URL da imagem {image.ImageId}");
                 }
             }
 
@@ -265,20 +285,20 @@ namespace NetBridgeDev.Api
     public class PostCreateRequest
     {
         public long? Id { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string Content { get; set; }
-        public string CreatedAt { get; set; }
-        public ImageUploadResult[] Images { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Content { get; set; } = "";
+        public string? CreatedAt { get; set; }
+        public ImageUploadResult[]? Images { get; set; }
     }
 
     public class ImageUploadResult
     {
-        public string ImageId { get; set; }
-        public string TempUrl { get; set; }
-        public string FinalUrl { get; set; }
+        public string ImageId { get; set; } = "";
+        public string TempUrl { get; set; } = "";
+        public string FinalUrl { get; set; } = "";
         public bool Success { get; set; }
-        public string Error { get; set; }
+        public string? Error { get; set; }
     }
 }
 
